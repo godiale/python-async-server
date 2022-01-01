@@ -7,6 +7,6 @@ def print_hi(name):
 
 
 if __name__ == '__main__':
-    init_logging(filename='bubu.log')
+    init_logging(filename='sequential_server.log')
     log = logging.getLogger(__name__)
     print_hi('PyCharm')
