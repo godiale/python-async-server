@@ -41,8 +41,11 @@ async def client(name, indent):
 
 
 async def main():
-    clients = [asyncio.create_task(client(i, i)) for i in range(3)]
-    await asyncio.wait(clients)
+    clients = [asyncio.create_task(client(i, i)) for i in range(1)]
+    done, pending = await asyncio.wait(clients)
+    for d in done:
+        if d.exception() is not None:
+            log.info(d.exception())
 
 
 if __name__ == '__main__':
