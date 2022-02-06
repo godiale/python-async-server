@@ -5,13 +5,28 @@ from collections import deque
 from logger import init_logging
 
 
-class EventLoopIO:
+class EventLoopYieldFrom:
     def __init__(self):
         self.tasks_to_run = deque([])
         self.sel = selectors.DefaultSelector()
 
     def create_task(self, coro):
         self.tasks_to_run.append(coro)
+
+    @staticmethod
+    def sock_recv(sock, n):
+        yield 'wait_read', sock
+        return sock.recv(n)
+
+    @staticmethod
+    def sock_sendall(sock, data):
+        yield 'wait_write', sock
+        return sock.sendall(data)
+
+    @staticmethod
+    def sock_accept(sock):
+        yield 'wait_read', sock
+        return sock.accept()
 
     def run(self):
         while True:
@@ -36,7 +51,7 @@ class EventLoopIO:
                     self.create_task(task)
 
 
-loop = EventLoopIO()
+loop = EventLoopYieldFrom()
 
 
 def run_server(host='127.0.0.1', port=55555):
@@ -46,20 +61,17 @@ def run_server(host='127.0.0.1', port=55555):
     sock.listen()
 
     while True:
-        yield 'wait_read', sock
-        client_sock, addr = sock.accept()
+        client_sock, addr = yield from loop.sock_accept(sock)
         log.info(f"Connection from: {addr}")
         loop.create_task(handle_client(client_sock))
 
 
 def handle_client(sock):
     while True:
-        yield 'wait_read', sock
-        received_data = sock.recv(4096)
+        received_data = yield from loop.sock_recv(sock, 4096)
         if not received_data:
             break
-        yield 'wait_write', sock
-        sock.sendall(received_data)
+        yield from loop.sock_sendall(sock, received_data)
 
     log.info(f"Client disconnected: {sock.getpeername()}")
     sock.close()
